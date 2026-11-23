@@ -1,0 +1,22 @@
+# 知识库构建工具依赖
+
+# LLM客户端
+requests>=2.31.0
+
+# 文档解析
+python-docx>=1.1.0
+PyPDF2>=3.0.0
+markdown>=3.5
+
+# 配置文件
+PyYAML>=6.0
+
+# 文件系统监听
+watchdog>=3.0.0
+
+# 向量化和检索
+sentence-transformers>=2.2.0
+chromadb>=0.4.0
+
+# 工具
+python-dateutil>=2.8.2

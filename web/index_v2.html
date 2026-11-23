@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnowFlow</title>
+    <script src="./cytoscape.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #151515;
+            --bg-tertiary: #1f1f1f;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #2a2a2a;
+            --sidebar-width: 280px;
+            --sidebar-collapsed: 48px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 左侧边栏 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed);
+        }
+
+        .sidebar.collapsed .sidebar-content {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding: 20px 10px;
+            justify-content: center;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .sidebar.collapsed .logo {
+            display: none;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            transition: opacity 0.2s;
+        }
+
+        .sidebar-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .explore-section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-primary);
+        }
+
+        .search-box input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-explore {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-explore:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-explore:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .concept-tree {
+            margin-top: 16px;
+        }
+
+        .concept-node {
+            margin-bottom: 4px;
+        }
+
+        .concept-item {
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .concept-item:hover {
+            background: var(--bg-primary);
+            border-color: var(--border);
+        }
+
+        .concept-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .concept-expand {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+        }
+
+        .concept-expand.expanded {
+            transform: rotate(90deg);
+        }
+
+        .concept-name {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .concept-actions {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 6px 8px;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .concept-children {
+            margin-left: 20px;
+            margin-top: 4px;
+        }
+
+        /* 主对话区域 */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+        }
+
+        .chat-header {
+            padding: 20px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .message {
+            margin-bottom: 32px;
+            max-width: 720px;
+        }
+
+        .message.user {
+            margin-left: auto;
+        }
+
+        .message-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .message-content {
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .message.user .message-content {
+            background: var(--accent);
+            color: white;
+        }
+
+        .concepts-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .concept-tag {
+            padding: 8px 14px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .concept-tag:hover {
+            background: var(--bg-secondary);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .chat-input-area {
+            padding: 24px 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chat-input-wrapper {
+            max-width: 720px;
+            position: relative;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 14px 50px 14px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            resize: none;
+            transition: all 0.2s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-send {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-send:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            padding: 16px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">KnowFlow</div>
+                <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="explore-section">
+                    <div class="section-title">探索新概念</div>
+                    <div class="search-box">
+                        <input type="text" id="concept-input" placeholder="输入概念，如：Transformer">
+                    </div>
+                    <button class="btn-explore" id="explore-btn">开始探索</button>
+                </div>
+
+                <div class="explore-section">
+                    <div class="section-title">概念树</div>
+                    <div class="loading" id="loading">加载中...</div>
+                    <div class="concept-tree" id="concept-tree"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主对话区域 -->
+        <main class="main-area">
+            <header class="chat-header">
+                <div class="chat-title">知识探索对话</div>
+            </header>
+
+            <div class="chat-messages" id="chat-messages">
+                <div class="empty-state">
+                    <h2>开始你的知识探索之旅</h2>
+                    <p>在左侧输入概念，或直接在下方提问</p>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="chat-input-wrapper">
+                    <textarea class="chat-input" id="chat-input" placeholder="输入你的问题..." rows="1"></textarea>
+                    <button class="btn-send" id="send-btn">→</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let conceptTree = {};
+        let chatHistory = [];
+
+        // 切换边栏
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
+        // 探索概念
+        async function exploreConcept(concept = null) {
+            if (!concept) {
+                concept = document.getElementById('concept-input').value.trim();
+            }
+
+            if (!concept) {
+                alert('请输入概念');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const btn = document.getElementById('explore-btn');
+
+            loading.classList.add('active');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/explore`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ concept, depth: 0 })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 添加到概念树
+                    const id = 'concept_' + Date.now();
+                    conceptTree[id] = {
+                        id: id,
+                        name: concept,
+                        children: data.concepts.map(c => ({
+                            id: id + '_' + c.name,
+                            name: c.name,
+                            description: c.description,
+                            children: [],
+                            expanded: false
+                        })),
+                        expanded: true
+                    };
+
+                    renderConceptTree();
+
+                    // 在对话区显示结果
+                    addMessage('assistant', data.analysis, data.concepts);
+                } else {
+                    alert('探索失败: ' + data.error);
+                }
+
+            } catch (error) {
+                console.error('Explore failed:', error);
+                alert('探索失败: ' + error.message);
+            } finally {
+                loading.classList.remove('active');
+                btn.disabled = false;
+            }
+        }
+
+        // 渲染概念树
+        function renderConceptTree() {
+            const container = document.getElementById('concept-tree');
+            container.innerHTML = '';
+
+            Object.values(conceptTree).forEach(rootConcept => {
+                renderConceptNode(rootConcept, container, 0);
+            });
+        }
+
+        // 渲染单个概念节点
+        function renderConceptNode(concept, container, level) {
+            const div = document.createElement('div');
+            div.className = 'concept-node';
+
+            const hasChildren = concept.children && concept.children.length > 0;
+
+            div.innerHTML = `
+                <div class="concept-item">
+                    <div class="concept-header">
+                        ${hasChildren ? `<div class="concept-expand ${concept.expanded ? 'expanded' : ''}" onclick="toggleConcept('${concept.id}')">▶</div>` : '<div style="width:16px"></div>'}
+                        <div class="concept-name">${concept.name}</div>
+                    </div>
+                    ${level === 0 ? `
+                    <div class="concept-actions">
+                        <button class="btn-action" onclick="startDialogue('${concept.name}')">对话</button>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            container.appendChild(div);
+
+            if (concept.expanded && hasChildren) {
+                const childrenDiv = document.createElement('div');
+                childrenDiv.className = 'concept-children';
+                concept.children.forEach(child => {
+                    renderConceptNode(child, childrenDiv, level + 1);
+                });
+                container.appendChild(childrenDiv);
+            }
+        }
+
+        // 切换展开/收起
+        function toggleConcept(id) {
+            const concept = findConcept(id);
+            if (concept) {
+                concept.expanded = !concept.expanded;
+                renderConceptTree();
+            }
+        }
+
+        // 查找概念
+        function findConcept(id) {
+            for (let rootId in conceptTree) {
+                if (rootId === id) return conceptTree[rootId];
+                const found = searchInChildren(conceptTree[rootId], id);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function searchInChildren(node, id) {
+            if (node.id === id) return node;
+            if (node.children) {
+                for (let child of node.children) {
+                    if (child.id === id) return child;
+                    const found = searchInChildren(child, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        // 添加消息
+        function addMessage(role, content, concepts = null) {
+            const messagesContainer = document.getElementById('chat-messages');
+
+            // 移除空状态
+            const emptyState = messagesContainer.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+
+            let html = `
+                <div class="message-label">${role === 'user' ? '你' : 'KnowFlow'}</div>
+                <div class="message-content">${content}</div>
+            `;
+
+            if (concepts && concepts.length > 0) {
+                html += '<div class="concepts-suggestions">';
+                concepts.forEach(c => {
+                    html += `<div class="concept-tag" onclick="exploreConcept('${c.name}')">${c.name}</div>`;
+                });
+                html += '</div>';
+            }
+
+            messageDiv.innerHTML = html;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // 启动对话
+        async function startDialogue(concept) {
+            addMessage('user', `我想深入学习${concept}`);
+
+            // 调用API获取苏格拉底式回复
+            try {
+                const response = await fetch(`${API_BASE}/api/question`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: `请用苏格拉底式对话引导我理解${concept}概念`,
+                        context: `用户想深入学习${concept}，请通过提问的方式引导思考，而不是直接讲解。`
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    addMessage('assistant', data.answer);
+                } else {
+                    addMessage('assistant', '抱歉，对话启动失败：' + data.error);
+                }
+            } catch (error) {
+                console.error('Dialogue failed:', error);
+                addMessage('assistant', '对话连接失败，请检查API服务');
+            }
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            addMessage('user', message);
+            input.value = '';
+            input.style.height = 'auto';
+
+            // 调用API获取回复
+            try {
+                const response = await fetch(`${API_BASE}/api/question`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: message,
+                        context: getChatContext()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    addMessage('assistant', data.answer);
+                } else {
+                    addMessage('assistant', '回复失败：' + data.error);
+                }
+            } catch (error) {
+                console.error('Send message failed:', error);
+                addMessage('assistant', '消息发送失败，请检查API服务');
+            }
+        }
+
+        // 获取对话上下文
+        function getChatContext() {
+            const messages = document.querySelectorAll('.message');
+            const recentMessages = Array.from(messages).slice(-6);
+            return recentMessages.map(m => {
+                const role = m.classList.contains('user') ? 'User' : 'Assistant';
+                const content = m.querySelector('.message-content').textContent;
+                return `${role}: ${content}`;
+            }).join('\n');
+        }
+
+        // 事件绑定
+        document.getElementById('explore-btn').onclick = () => exploreConcept();
+        document.getElementById('send-btn').onclick = sendMessage;
+        document.getElementById('concept-input').onkeypress = (e) => {
+            if (e.key === 'Enter') exploreConcept();
+        };
+        document.getElementById('chat-input').onkeypress = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        };
+
+        // 自动调整输入框高度
+        document.getElementById('chat-input').oninput = function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        };
+    </script>
+</body>
+</html>

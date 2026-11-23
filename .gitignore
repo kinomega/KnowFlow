@@ -1,0 +1,41 @@
+# 敏感配置
+config.yaml
+
+# 个人数据
+chat-logs/
+启动KnowFlow.bat
+
+# 打包输出
+dist/
+build/
+# 保留打包配置
+!knowflow.spec
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 虚拟环境
+venv/
+env/
+ENV/
+
+# 向量数据库
+.knowflow/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 测试输出
+*.log
+test_output/
+
+# OS
+.DS_Store
+Thumbs.db

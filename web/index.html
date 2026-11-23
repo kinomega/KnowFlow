@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KnowFlow - 知识探索</title>
+    <script src="./cytoscape.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            height: 100vh;
+        }
+
+        .sidebar {
+            background: #242424;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            padding: 15px 20px;
+            background: #2a2a2a;
+            border-bottom: 1px solid #333;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .controls {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #999;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            padding: 15px 20px;
+            background: #242424;
+            border-bottom: 1px solid #333;
+            display: flex;
+            gap: 10px;
+        }
+
+        .toolbar button {
+            width: auto;
+            padding: 8px 16px;
+            margin: 0;
+        }
+
+        #graph {
+            flex: 1;
+            background: #1a1a1a;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .concepts-list {
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .concept-item {
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+        .concept-item:hover {
+            border-color: #4CAF50;
+        }
+
+        .concept-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .concept-expand {
+            font-size: 12px;
+            color: #999;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .concept-desc {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .concept-children {
+            margin-left: 20px;
+            margin-top: 8px;
+            padding-left: 10px;
+            border-left: 2px solid #333;
+        }
+
+        .concept-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .concept-actions button {
+            padding: 4px 8px;
+            font-size: 12px;
+            margin: 0;
+        }
+
+        .action-btn {
+            background: #555;
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .action-btn:hover {
+            background: #666;
+        }
+
+        .action-btn.primary {
+            background: #4CAF50;
+        }
+
+        .action-btn.primary:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧边栏 -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>KnowFlow</h1>
+                <p style="color: #999; font-size: 14px;">知识探索系统</p>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <span>概念总数</span>
+                    <span class="stat-value" id="stat-concepts">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>关系总数</span>
+                    <span class="stat-value" id="stat-relations">0</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="input-group">
+                    <label>探索新概念</label>
+                    <input type="text" id="concept-input" placeholder="输入概念，如：Transformer">
+                </div>
+                <button id="explore-btn">开始探索</button>
+                <button id="refresh-btn">刷新图谱</button>
+
+                <div class="loading" id="loading">
+                    加载中...
+                </div>
+
+                <div class="concepts-list" id="concepts-list"></div>
+            </div>
+        </div>
+
+        <!-- 右侧图谱 -->
+        <div class="main-content">
+            <div class="toolbar">
+                <button id="fit-btn">适应窗口</button>
+                <button id="layout-btn">重新布局</button>
+            </div>
+            <div id="graph"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let cy = null;
+        let conceptTree = {}; // 概念树结构
+
+        // 初始化图谱
+        function initGraph() {
+            cy = cytoscape({
+                container: document.getElementById('graph'),
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': '#4CAF50',
+                            'label': 'data(label)',
+                            'color': '#fff',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'font-size': '12px',
+                            'width': '60px',
+                            'height': '60px'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#666',
+                            'target-arrow-color': '#666',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    animate: true
+                }
+            });
+
+            // 节点点击事件
+            cy.on('tap', 'node', function(evt) {
+                const node = evt.target;
+                const nodeData = node.data();
+                console.log('Clicked:', nodeData);
+                // 可以在这里触发深入探索
+                document.getElementById('concept-input').value = nodeData.label;
+            });
+        }
+
+        // 加载图谱数据
+        async function loadGraph() {
+            try {
+                const response = await fetch(`${API_BASE}/api/graph`);
+                const data = await response.json();
+
+                // 清空现有图谱
+                cy.elements().remove();
+
+                // 添加节点
+                data.nodes.forEach(node => {
+                    cy.add({
+                        group: 'nodes',
+                        data: {
+                            id: node.id,
+                            label: node.label
+                        }
+                    });
+                });
+
+                // 添加边
+                data.edges.forEach(edge => {
+                    cy.add({
+                        group: 'edges',
+                        data: {
+                            source: edge.source,
+                            target: edge.target
+                        }
+                    });
+                });
+
+                // 重新布局
+                cy.layout({ name: 'cose', animate: true }).run();
+
+                // 更新统计
+                document.getElementById('stat-concepts').textContent = data.stats.total_concepts;
+                document.getElementById('stat-relations').textContent = data.stats.total_relations;
+
+            } catch (error) {
+                console.error('Failed to load graph:', error);
+                alert('加载图谱失败，请确保API服务已启动');
+            }
+        }
+
+        // 探索概念
+        async function exploreConcept(concept = null, parentId = null) {
+            if (!concept) {
+                concept = document.getElementById('concept-input').value.trim();
+            }
+
+            if (!concept) {
+                alert('请输入概念');
+                return;
+            }
+
+            const loading = document.getElementById('loading');
+            const btn = document.getElementById('explore-btn');
+
+            loading.classList.add('active');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/explore`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ concept, depth: 0 })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 添加到概念树
+                    if (!parentId) {
+                        // 顶层概念
+                        const id = 'concept_' + Date.now();
+                        conceptTree[id] = {
+                            id: id,
+                            name: concept,
+                            children: data.concepts,
+                            expanded: true
+                        };
+                    }
+
+                    // 渲染概念树
+                    renderConceptTree();
+
+                    // 添加节点到图谱
+                    addNodeToGraph(concept, data.concepts);
+                } else {
+                    alert('探索失败: ' + data.error);
+                }
+
+            } catch (error) {
+                console.error('Explore failed:', error);
+                alert('探索失败: ' + error.message);
+            } finally {
+                loading.classList.remove('active');
+                btn.disabled = false;
+            }
+        }
+
+        // 渲染概念树
+        function renderConceptTree() {
+            const list = document.getElementById('concepts-list');
+            list.innerHTML = '';
+
+            Object.values(conceptTree).forEach(rootConcept => {
+                renderConceptNode(rootConcept, list, 0);
+            });
+        }
+
+        // 渲染单个概念节点
+        function renderConceptNode(conceptData, container, level) {
+            const div = document.createElement('div');
+            div.className = 'concept-item';
+            div.style.marginLeft = (level * 15) + 'px';
+
+            const hasChildren = conceptData.children && conceptData.children.length > 0;
+            const expandIcon = conceptData.expanded ? '▼' : '▶';
+
+            div.innerHTML = `
+                <div class="concept-name">
+                    ${hasChildren ? `<span class="concept-expand" onclick="toggleConcept('${conceptData.id}')">${expandIcon}</span>` : ''}
+                    <span>${conceptData.name}</span>
+                </div>
+                ${conceptData.description ? `<div class="concept-desc">${conceptData.description}</div>` : ''}
+                <div class="concept-actions">
+                    <button class="action-btn primary" onclick="deepDive('${conceptData.name}', '${conceptData.id}')">深入</button>
+                    <button class="action-btn" onclick="startDialogue('${conceptData.name}')">对话</button>
+                </div>
+            `;
+
+            container.appendChild(div);
+
+            // 如果展开且有子概念，渲染子概念
+            if (conceptData.expanded && hasChildren) {
+                conceptData.children.forEach(child => {
+                    const childData = {
+                        id: conceptData.id + '_' + child.name,
+                        name: child.name,
+                        description: child.description,
+                        children: child.children || [],
+                        expanded: false
+                    };
+                    renderConceptNode(childData, container, level + 1);
+                });
+            }
+        }
+
+        // 切换展开/收起
+        function toggleConcept(id) {
+            const concept = findConcept(id);
+            if (concept) {
+                concept.expanded = !concept.expanded;
+                renderConceptTree();
+            }
+        }
+
+        // 查找概念
+        function findConcept(id) {
+            for (let rootId in conceptTree) {
+                if (rootId === id) return conceptTree[rootId];
+                const found = searchInChildren(conceptTree[rootId], id);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function searchInChildren(node, id) {
+            if (node.id === id) return node;
+            if (node.children) {
+                for (let child of node.children) {
+                    if (child.id === id) return child;
+                    const found = searchInChildren(child, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        // 深入探索子概念
+        async function deepDive(concept, parentId) {
+            const loading = document.getElementById('loading');
+            loading.classList.add('active');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/explore`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ concept, depth: 1 })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // 找到父节点并添加子概念
+                    const parent = findConcept(parentId);
+                    if (parent) {
+                        parent.children = data.concepts.map(c => ({
+                            id: parentId + '_' + c.name,
+                            name: c.name,
+                            description: c.description,
+                            children: [],
+                            expanded: false
+                        }));
+                        parent.expanded = true;
+                        renderConceptTree();
+                    }
+
+                    // 更新图谱
+                    addNodeToGraph(concept, data.concepts);
+                }
+            } catch (error) {
+                console.error('Deep dive failed:', error);
+                alert('深入探索失败');
+            } finally {
+                loading.classList.remove('active');
+            }
+        }
+
+        // 添加节点到图谱
+        function addNodeToGraph(parentConcept, childConcepts) {
+            const parentId = 'node_' + parentConcept.replace(/\s+/g, '_');
+
+            // 添加父节点（如果不存在）
+            if (!cy.getElementById(parentId).length) {
+                cy.add({
+                    group: 'nodes',
+                    data: { id: parentId, label: parentConcept }
+                });
+            }
+
+            // 添加子节点和连线
+            childConcepts.forEach(child => {
+                const childId = 'node_' + child.name.replace(/\s+/g, '_');
+
+                if (!cy.getElementById(childId).length) {
+                    cy.add({
+                        group: 'nodes',
+                        data: { id: childId, label: child.name }
+                    });
+                }
+
+                // 添加边
+                const edgeId = parentId + '_to_' + childId;
+                if (!cy.getElementById(edgeId).length) {
+                    cy.add({
+                        group: 'edges',
+                        data: { id: edgeId, source: parentId, target: childId }
+                    });
+                }
+            });
+
+            // 重新布局
+            cy.layout({ name: 'cose', animate: true }).run();
+        }
+
+        // 启动对话（占位）
+        function startDialogue(concept) {
+            alert(`苏格拉底对话功能开发中...\n概念: ${concept}`);
+            // TODO: 打开对话界面
+        }
+
+        // 事件绑定
+        document.getElementById('explore-btn').onclick = () => exploreConcept();
+        document.getElementById('refresh-btn').onclick = loadGraph;
+        document.getElementById('fit-btn').onclick = () => cy.fit();
+        document.getElementById('layout-btn').onclick = () => {
+            cy.layout({ name: 'cose', animate: true }).run();
+        };
+
+        document.getElementById('concept-input').onkeypress = (e) => {
+            if (e.key === 'Enter') exploreConcept();
+        };
+
+        // 初始化
+        initGraph();
+        loadGraph();
+    </script>
+</body>
+</html>

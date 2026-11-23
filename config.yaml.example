@@ -1,0 +1,51 @@
+# 知识库构建工具配置
+
+# 工作模式
+mode: "obsidian"  # obsidian（关联Obsidian） / standalone（独立模式）
+
+# LLM配置
+llm:
+  # 提供商选择：anthropic / openai / ollama
+  provider: "anthropic"
+  model: "claude-sonnet-4-6"
+  api_key: "your-api-key-here"
+  base_url: "https://api.anthropic.com"
+  temperature: 0.7
+
+# 常见LLM配置示例：
+# 1. Anthropic Claude: provider: "anthropic", base_url: "https://api.anthropic.com"
+# 2. OpenAI: provider: "openai", base_url: "https://api.openai.com"
+# 3. DeepSeek: provider: "openai", base_url: "https://api.deepseek.com"
+# 4. 通义千问: provider: "openai", base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+# 5. 智谱AI: provider: "openai", base_url: "https://open.bigmodel.cn/api/paas/v4"
+# 6. Kimi: provider: "openai", base_url: "https://api.moonshot.cn/v1"
+# 7. Ollama: provider: "ollama", base_url: "http://localhost:11434"
+# 8. 中转API: provider: "openai", base_url: "https://your-proxy.com/v1"
+
+# Obsidian模式配置（mode: "obsidian"时使用）
+obsidian:
+  vault_path: "D:/Obsidian/mine"  # Obsidian vault路径
+  target_folder: "mine"  # 笔记保存的子文件夹
+  # 文件监听：自动同步Obsidian中的笔记变化
+  watch_files: true
+
+# 独立模式配置（mode: "standalone"时使用）
+standalone:
+  notes_path: "./notes"  # 笔记存储目录（相对或绝对路径）
+  # 文件监听：监听notes目录的变化
+  watch_files: true
+
+# 笔记格式配置
+note:
+  # frontmatter字段（简化版）
+  frontmatter:
+    - concept  # 概念名称
+    - created  # 创建时间
+  # 是否使用Obsidian链接语法 [[概念名]]
+  use_wiki_links: true
+
+# Obsidian REST API配置（可选，用于高级集成）
+obsidian_api:
+  enabled: false
+  api_key: ""
+  base_url: "https://127.0.0.1:27124"

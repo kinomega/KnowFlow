@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>KnowFlow - CMD Style</title>
+    <script src="./marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #151515;
+            --bg-tertiary: #1f1f1f;
+            --text-primary: #ffffff;
+            --text-secondary: #b8b8b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #2a2a2a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 左侧边栏 */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+
+        .tree-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-new-topic {
+            flex: 1;
+            padding: 14px;
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-new-topic:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-settings {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-settings:hover {
+            background: var(--bg-hover);
+            transform: translateY(-1px);
+        }
+
+        .tree-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tree-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tree-container::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .tree-node {
+            /* 移除外层margin，使用padding控制缩进 */
+        }
+
+        .tree-item {
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .tree-item:hover {
+            background: var(--bg-primary);
+            border-color: var(--border);
+        }
+
+        .tree-item.active {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .tree-expand {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+        }
+
+        .tree-expand.expanded {
+            transform: rotate(90deg);
+        }
+
+        .tree-label {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .tree-children {
+            margin-left: 20px;
+            margin-top: 4px;
+            padding-left: 12px;
+            border-left: 2px solid var(--border);
+        }
+
+        /* 主内容区 */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-header {
+            padding: 20px 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 0;  /* 移除间隙 */
+        }
+
+        .depth-indicator {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-right: 8px;
+        }
+
+        .current-topic {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .content-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .content-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .content-area::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .content-section {
+            margin-bottom: 32px;
+            max-width: 800px;
+        }
+
+        .content-section h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .content-section p {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        .content-section h2 {
+            font-size: 18px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .content-section h3 {
+            font-size: 16px;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .content-section ul, .content-section ol {
+            margin-left: 20px;
+            margin-top: 8px;
+        }
+
+        .content-section li {
+            margin-bottom: 6px;
+            line-height: 1.6;
+        }
+
+        .content-section strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .content-section code {
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .concepts-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .concept-card {
+            padding: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            overflow: hidden;
+        }
+
+        .concept-card:hover {
+            border-color: var(--accent);
+        }
+
+        .concept-header {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+        }
+
+        .concept-number-btn {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .concept-number-btn:hover {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        .concept-info {
+            flex: 1;
+            margin-left: 12px;
+            margin-right: 12px;
+        }
+
+        .concept-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .concept-domain {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .concept-label {
+            color: #888;
+            font-weight: 400;
+            font-size: 11px;
+        }
+
+        .concept-domain {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .concept-expand-btn {
+            width: 32px;
+            height: 32px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .concept-expand-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+        }
+
+        .concept-expand-btn.expanded {
+            transform: rotate(180deg);
+        }
+
+        .concept-detail {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            display: none;
+        }
+
+        .concept-detail.show {
+            display: block;
+        }
+
+        .concept-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .concept-tag {
+            padding: 4px 10px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            font-size: 11px;
+            color: var(--accent);
+        }
+
+        .input-panel {
+            padding: 24px 32px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .input-wrapper {
+            max-width: 1000px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 16px 20px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            padding: 12px 20px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-action:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .btn-action.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-action.primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-submit {
+            padding: 12px 24px;
+            background: var(--accent);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-submit:hover {
+            background: var(--accent-hover);
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        @keyframes pulse-stop {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        /* 设置模态窗口 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: relative;
+            width: 600px;
+            max-width: 90vw;
+            max-height: 80vh;
+            background: var(--bg);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--text);
+        }
+
+        .btn-modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 28px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .btn-modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        .modal-tabs {
+            display: flex;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border);
+            gap: 4px;
+        }
+
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+            background: var(--bg-hover);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg);
+        }
+
+        .form-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+
+        /* 语言选择按钮 */
+        .language-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .lang-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: 2px solid #4b5563;
+            background: transparent;
+            color: #6b7280;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .lang-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+            border-color: #5865f2;
+        }
+
+        .lang-btn.active {
+            background: #4752c4;
+            color: #ffffff;
+            border-color: #4752c4;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧概念树 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">KnowFlow</div>
+            </div>
+
+            <div class="tree-container" id="tree-container">
+                <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary); font-size: 13px;">
+                    开始探索后<br>这里会显示概念树
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="btn-settings" id="btn-settings" title="设置">⚙️</button>
+                <button class="btn-new-topic" id="btn-new">+ 新话题</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-area">
+            <header class="main-header">
+                <div class="header-info">
+                    <div class="depth-indicator" id="depth-indicator">深度: 第1层</div>
+                    <div class="current-topic" id="current-topic">-</div>
+                </div>
+            </header>
+
+            <div class="content-area" id="content-area">
+                <div class="empty-state">
+                    <h2>开始探索</h2>
+                    <p>在下方输入关键词开始你的知识之旅</p>
+                </div>
+            </div>
+
+            <div class="input-panel">
+                <div class="input-wrapper">
+                    <textarea class="input-field" id="input-field" placeholder="输入关键词或问题..." rows="2"></textarea>
+                    <div class="input-actions">
+                        <button class="btn-action" id="btn-question">问答</button>
+                        <button class="btn-submit" id="btn-submit">探索</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8001';
+
+        // 探索栈改为树结构
+        let rootNodes = []; // 根节点列表
+        let currentNode = null; // 当前节点
+        let currentMode = 'explore';
+        let currentAbortController = null; // 用于中断请求
+
+        // JSON结构化数据转HTML的格式化函数
+        function formatAnalysisToHTML(jsonData) {
+            let html = '';
+
+            // 标准定义部分
+            if (jsonData.standard_definition) {
+                const sd = jsonData.standard_definition;
+                html += '<div style="margin-bottom: 28px;">\n';
+                html += `<h3 style="color: #8ab4f8; font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid #3c4043; padding-bottom: 8px;">${getText('section_definition')}</h3>\n`;
+
+                if (sd.core) {
+                    html += `<div style="background: #2a2e35; padding: 16px; border-radius: 8px; border-left: 3px solid #8ab4f8; margin-bottom: 16px;">\n`;
+                    html += `<div style="color: #8ab4f8; font-size: 12px; margin-bottom: 6px;">Core</div>\n`;
+                    html += `<div style="font-size: 15px; line-height: 1.7; font-weight: 500;">${sd.core}</div>\n`;
+                    html += '</div>\n';
+                }
+
+                if (sd.description) {
+                    html += `<div style="line-height: 1.8; margin-bottom: 16px; font-size: 14px; color: #e8eaed;">${sd.description}</div>\n`;
+                }
+
+                if (sd.key_points && sd.key_points.length > 0) {
+                    html += '<div style="margin-bottom: 16px;">\n';
+                    html += `<div style="color: #9aa0a6; font-size: 13px; margin-bottom: 8px; font-weight: 600;">${getText('feature_label')}</div>\n`;
+                    html += '<ul style="margin: 0; padding-left: 20px; line-height: 1.8;">\n';
+                    sd.key_points.forEach(point => {
+                        html += `<li style="margin-bottom: 6px; color: #e8eaed;">${point}</li>\n`;
+                    });
+                    html += '</ul>\n';
+                    html += '</div>\n';
+                }
+
+                if (sd.use_cases && sd.use_cases.length > 0) {
+                    html += '<div style="margin-bottom: 16px;">\n';
+                    html += `<div style="color: #9aa0a6; font-size: 13px; margin-bottom: 8px; font-weight: 600;">${getText('scene_label')}</div>\n`;
+                    html += '<ul style="margin: 0; padding-left: 20px; line-height: 1.8;">\n';
+                    sd.use_cases.forEach(useCase => {
+                        html += `<li style="margin-bottom: 6px; color: #e8eaed;">${useCase}</li>\n`;
+                    });
+                    html += '</ul>\n';
+                    html += '</div>\n';
+                }
+
+                if (sd.related_concepts && sd.related_concepts.length > 0) {
+                    html += '<div>\n';
+                    html += '<div style="color: #9aa0a6; font-size: 13px; margin-bottom: 8px; font-weight: 600;">Related</div>\n';
+                    html += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">\n';
+                    sd.related_concepts.forEach(concept => {
+                        html += `<span style="background: #3c4043; padding: 6px 12px; border-radius: 16px; font-size: 13px; color: #9aa0a6;">${concept}</span>\n`;
+                    });
+                    html += '</div>\n';
+                    html += '</div>\n';
+                }
+
+                html += '</div>\n';
+            }
+
+            // 用户理解部分
+            if (jsonData.user_understanding && jsonData.user_understanding.content) {
+                const uu = jsonData.user_understanding;
+                html += '<div style="margin-bottom: 28px;">\n';
+                html += `<h3 style="color: #81c995; font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid #3c4043; padding-bottom: 8px;">${getText('section_understanding')}</h3>\n`;
+                html += `<div style="background: #1f2e24; padding: 16px; border-radius: 8px; border-left: 3px solid #81c995; line-height: 1.8; font-size: 14px; color: #e8eaed;">${uu.content}</div>\n`;
+                if (uu.compressed) {
+                    html += `<div style="color: #9aa0a6; font-size: 12px; margin-top: 8px; font-style: italic;">${getText('compressed_label')}</div>\n`;
+                }
+                html += '</div>\n';
+            }
+
+            // 关键补充
+            if (jsonData.key_supplements && jsonData.key_supplements.length > 0) {
+                html += '<div style="margin-bottom: 28px;">\n';
+                html += `<h3 style="color: #fdd663; font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid #3c4043; padding-bottom: 8px;">${getText('section_supplement')}</h3>\n`;
+                html += '<ul style="margin: 0; padding-left: 20px; line-height: 1.8;">\n';
+                jsonData.key_supplements.forEach(supp => {
+                    html += `<li style="margin-bottom: 8px; color: #e8eaed;">${supp}</li>\n`;
+                });
+                html += '</ul>\n';
+                html += '</div>\n';
+            }
+
+            return html;
+        }
+
+        // 树节点结构
+        class TreeNode {
+            constructor(keyword, analysis, concepts) {
+                this.id = Date.now() + Math.random();
+                this.keyword = keyword;
+                this.analysis = analysis;
+                this.concepts = concepts;
+                this.children = [];
+                this.parent = null;
+                this.expanded = true;
+                this.qaHistory = []; // 问答历史
+                this.savedQACount = 0; // 已保存的问答数量
+                this.isSaving = false; // 是否正在保存
+            }
+
+            // 添加问答记录
+            addQA(question, answer) {
+                this.qaHistory.push({
+                    question,
+                    answer,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
+            // 判断是否需要保存
+            needsSave() {
+                return this.qaHistory.length > this.savedQACount;
+            }
+
+            // 标记为已保存
+            markSaved() {
+                this.savedQACount = this.qaHistory.length;
+            }
+
+            // 生成完整笔记内容
+            generateNote() {
+                let content = `# ${this.keyword}\n\n`;
+                content += `## 概念分析\n\n${this.analysis}\n\n`;
+
+                if (this.qaHistory.length > 0) {
+                    content += `## 问答记录\n\n`;
+                    this.qaHistory.forEach((qa, index) => {
+                        content += `### Q${index + 1}: ${qa.question || '（让AI主动提问）'}\n\n`;
+                        content += `${qa.answer}\n\n`;
+                    });
+                }
+
+                if (this.concepts && this.concepts.length > 0) {
+                    content += `## 相关概念\n\n`;
+                    this.concepts.forEach((c, i) => {
+                        content += `[${i + 1}] ${c.name}\n`;
+                        if (c.description) {
+                            content += `${c.description}\n\n`;
+                        }
+                    });
+                }
+
+                return content;
+            }
+        }
+
+        // 显示提示消息（替代alert）
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 80px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${type === 'error' ? '#dc3545' : '#2a2e35'};
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-size: 14px;
+                max-width: 400px;
+                text-align: center;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            // 3秒后自动移除
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // 设置管理
+        const settings = {
+            language: 'zh',
+            max_tokens: 8192,
+            compress: true,
+            obsidian_path: ''
+        };
+
+        // 事件初始化标志
+        let settingsEventsInitialized = false;
+
+        // 多语言支持
+        const i18n = {
+            zh: {
+                'btn_new': '+ 新话题',
+                'input_placeholder': '输入关键词或问题...',
+                'input_placeholder_explore': '输入关键词...',
+                'input_placeholder_qa': '关于"{concept}"的问题...',
+                'btn_question': '问答',
+                'btn_submit': '提交',
+                'btn_explore': '探索',
+                'settings_title': '设置',
+                'tab_general': '通用',
+                'tab_llm': 'LLM',
+                'tab_dialogue': '问答',
+                'tab_storage': '存储',
+                'btn_cancel': '取消',
+                'btn_save': '保存',
+                'toast_settings_saved': '设置已保存',
+                'toast_open_failed': '打开设置失败',
+                'toast_save_failed': '保存设置失败',
+                'toast_explore_failed': '探索失败',
+                'toast_stopped': '已停止探索',
+                'toast_request_failed': '请求失败',
+                'toast_qa_stopped': '已停止生成',
+                'toast_qa_failed': '提问失败',
+                'toast_save_note_failed': '保存失败',
+                'depth_indicator': '深度: 第{depth}层',
+                'section_definition': '📖 标准定义',
+                'section_understanding': '💡 我的理解',
+                'section_supplement': '➕ 关键补充',
+                'feature_label': '关键特性',
+                'scene_label': '应用场景',
+                'compressed_label': '（已智能压缩整合）',
+                'note_saved_placeholder': '已保存的笔记',
+                'note_domain': '领域',
+                'note_learned_at': '学习时间',
+                'note_uncategorized': '未分类',
+                'note_unknown': '未知',
+                'qa_ai_prompt': '让AI主动提问',
+                'title_loading': '⏳ 加载中',
+                'title_loaded': '✅ 已加载',
+                'title_no_cache': '⚠️ 未命中缓存',
+                'title_failed': '❌ 加载失败',
+                'title_error': '❌ 异常',
+                'title_main': 'KnowFlow - 知识探索系统',
+                'settings_btn_title': '设置',
+                'type_base': '基石',
+                'type_frame': '框架',
+                'type_extend': '拓展',
+                'btn_stop': '停止',
+            },
+            en: {
+                'btn_new': '+ New Topic',
+                'input_placeholder': 'Enter keyword or question...',
+                'input_placeholder_explore': 'Enter keyword...',
+                'input_placeholder_qa': 'Question about "{concept}"...',
+                'btn_question': 'Q&A',
+                'btn_submit': 'Submit',
+                'btn_explore': 'Explore',
+                'settings_title': 'Settings',
+                'tab_general': 'General',
+                'tab_llm': 'LLM',
+                'tab_dialogue': 'Dialogue',
+                'tab_storage': 'Storage',
+                'btn_cancel': 'Cancel',
+                'btn_save': 'Save',
+                'toast_settings_saved': 'Settings saved',
+                'toast_open_failed': 'Failed to open settings',
+                'toast_save_failed': 'Failed to save settings',
+                'toast_explore_failed': 'Explore failed',
+                'toast_stopped': 'Stopped',
+                'toast_request_failed': 'Request failed',
+                'toast_qa_stopped': 'Stopped',
+                'toast_qa_failed': 'Question failed',
+                'toast_save_note_failed': 'Save failed',
+                'depth_indicator': 'Depth: Level {depth}',
+                'section_definition': '📖 Definition',
+                'section_understanding': '💡 My Understanding',
+                'section_supplement': '➕ Key Supplements',
+                'feature_label': 'Key Features',
+                'scene_label': 'Use Cases',
+                'compressed_label': '(Compressed & Merged)',
+                'title_loading': '⏳ Loading',
+                'title_loaded': '✅ Loaded',
+                'note_saved_placeholder': 'Saved note',
+                'note_domain': 'Domain',
+                'note_learned_at': 'Learned at',
+                'note_uncategorized': 'Uncategorized',
+                'note_unknown': 'Unknown',
+                'qa_ai_prompt': 'Let AI ask first',
+                'title_no_cache': '⚠️ Cache Miss',
+                'title_failed': '❌ Failed',
+                'title_error': '❌ Error',
+                'title_main': 'KnowFlow - Knowledge Explorer',
+                'settings_btn_title': 'Settings',
+                'type_base': 'Foundation',
+                'type_frame': 'Framework',
+                'type_extend': 'Extension',
+                'btn_stop': 'Stop',
+            }
+        };
+
+        // 获取翻译文本
+        function getText(key) {
+            const lang = settings.language || 'zh';
+            return i18n[lang][key] || i18n['zh'][key] || key;
+        }
+
+        // 应用语言到界面
+        async function applyLanguage(reloadTree = false) {
+            try {
+                const lang = settings.language || 'zh';
+
+                const btnNew = document.getElementById('btn-new');
+                if (btnNew) btnNew.textContent = getText('btn_new');
+
+                const inputField = document.getElementById('input-field');
+                if (inputField) inputField.placeholder = getText('input_placeholder');
+
+                const btnQuestion = document.getElementById('btn-question');
+                if (btnQuestion) btnQuestion.textContent = getText('btn_question');
+
+                const btnSubmit = document.getElementById('btn-submit');
+                if (btnSubmit) btnSubmit.textContent = getText('btn_submit');
+
+                const modalTitle = document.querySelector('.modal-header h2');
+                if (modalTitle) modalTitle.textContent = getText('settings_title');
+
+                const tabBtns = document.querySelectorAll('.tab-btn');
+                const tabKeys = ['tab_general', 'tab_llm', 'tab_dialogue', 'tab_storage'];
+                tabBtns.forEach((btn, index) => {
+                    if (tabKeys[index]) btn.textContent = getText(tabKeys[index]);
+                });
+
+                const btnCancel = document.getElementById('btn-cancel');
+                if (btnCancel) btnCancel.textContent = getText('btn_cancel');
+
+                const btnSave = document.getElementById('btn-save-settings');
+                if (btnSave) btnSave.textContent = getText('btn_save');
+
+                // 切语言时重新加载对应语言的树
+                if (reloadTree) {
+                    rootNodes.length = 0;
+                    currentNode = null;
+                    currentMode = 'explore';
+                    await loadSavedNotes();
+                    renderTree();
+                    updateUI();
+                    document.getElementById('content-area').innerHTML = `
+                        <div class="empty-state">
+                            <h2>📖 KnowFlow</h2>
+                            <p>${getText('input_placeholder_explore')}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('应用语言失败:', error);
+            }
+        }
+
+        // 从API加载配置
+        async function loadSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                if (resp.ok) {
+                    const saved = await resp.json();
+                    if (Object.keys(saved).length > 0) {
+                        Object.assign(settings, saved);
+                    }
+                }
+            } catch (e) {
+                console.error('加载设置失败:', e);
+            }
+        }
+
+        // 保存配置到API
+        function saveSettingsToStorage() {
+            return fetch('/api/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(settings)
+            }).catch(e => console.error('保存设置失败:', e));
+        }
+
+        // 打开设置窗口
+        function openSettings() {
+            try {
+                // 设置语言按钮的active状态
+                document.querySelectorAll('.lang-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.lang === settings.language);
+                });
+                document.getElementById('setting-max-tokens').value = settings.max_tokens;
+                document.getElementById('setting-compress').checked = settings.compress;
+                document.getElementById('setting-obsidian-path').value = settings.obsidian_path;
+                document.getElementById('settings-modal').style.display = 'flex';
+
+                // 只在第一次打开时绑定事件，避免重复绑定
+                if (!settingsEventsInitialized) {
+                    // 绑定tabs事件
+                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.onclick = () => switchTab(btn.dataset.tab);
+                    });
+
+                    // 绑定语言按钮点击事件
+                    document.querySelectorAll('.lang-btn').forEach(btn => {
+                        btn.onclick = () => {
+                            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                        };
+                    });
+
+                    // 绑定关闭、取消、保存按钮（之前在init()中绑定会失败，因为DOM未加载）
+                    document.querySelector('.btn-modal-close').onclick = closeSettings;
+                    document.getElementById('btn-cancel').onclick = closeSettings;
+                    document.querySelector('.modal-overlay').onclick = closeSettings;
+                    document.getElementById('btn-save-settings').onclick = saveSettingsFromForm;
+
+                    settingsEventsInitialized = true;
+                }
+            } catch (error) {
+                console.error('打开设置窗口失败:', error);
+                showToast(getText('toast_open_failed'), 'error');
+            }
+        }
+
+        // 关闭设置窗口
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        // 保存设置
+        async function saveSettingsFromForm() {
+            try {
+                const activeBtn = document.querySelector('.lang-btn.active');
+                if (activeBtn) {
+                    settings.language = activeBtn.dataset.lang;
+                } else {
+                    console.error('找不到active语言按钮，保持原有设置');
+                }
+
+                settings.max_tokens = parseInt(document.getElementById('setting-max-tokens').value);
+                settings.compress = document.getElementById('setting-compress').checked;
+                settings.obsidian_path = document.getElementById('setting-obsidian-path').value;
+                await saveSettingsToStorage();
+                await applyLanguage(true);
+                closeSettings();
+                showToast(getText('toast_settings_saved'), 'success');
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                showToast(getText('toast_save_failed') + ': ' + error.message, 'error');
+            }
+        }
+
+        // Tabs切换
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // 初始化
+        async function init() {
+            document.getElementById('btn-submit').onclick = handleSubmit;
+            document.getElementById('input-field').onkeypress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                }
+            };
+
+            document.getElementById('btn-question').onclick = handleQuestionClick; // 问答按钮特殊处理
+            document.getElementById('btn-new').onclick = startNew;
+
+            // 初始化UI状态（第0层）
+            updateUI();
+
+            // 初始化设置（先加载，才能按正确语言加载笔记）
+            await loadSettings();
+            document.getElementById('btn-settings').onclick = openSettings;
+
+            // 加载已保存的笔记（按语言过滤）
+            await loadSavedNotes();
+
+            // 应用语言设置
+            await applyLanguage();
+        }
+
+        // 启动问答模式（深入当前概念）
+        function startQA() {
+            if (!currentNode) {
+                showToast('请先选择一个概念', 'error');
+                return;
+            }
+
+            // 切换到问答模式
+            currentMode = 'question';
+
+            // 更新UI（会显示提交按钮）
+            updateUI();
+
+            // 聚焦输入框
+            document.getElementById('input-field').focus();
+
+            // 渲染问答界面（独立页面）
+            renderQAInterface();
+        }
+
+        // 渲染问答界面（聊天对话形式）
+        function renderQAInterface() {
+            if (!currentNode) return;
+
+            const contentArea = document.getElementById('content-area');
+
+            // 获取当前节点的所有问答记录
+            const qaRecords = currentNode.qaHistory || [];
+
+            // 构建对话消息HTML（聊天气泡形式）
+            let messagesHTML = '';
+            if (qaRecords.length > 0) {
+                qaRecords.forEach((qa, idx) => {
+                    // 用户消息（适度弱化，清晰可见但不抢眼）
+                    messagesHTML += `
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+                            <div style="max-width: 65%; background: rgba(95, 99, 104, 0.15); color: #9aa0a6; padding: 10px 14px; border-radius: 12px 12px 2px 12px; font-size: 13px;">
+                                <div style="line-height: 1.5;">${qa.question || '让AI主动提问'}</div>
+                            </div>
+                        </div>
+                    `;
+
+                    // AI回复（绝对主角，大气泡）
+                    messagesHTML += `
+                        <div style="display: flex; justify-content: flex-start; margin-bottom: 28px;">
+                            <div style="max-width: 90%; background: #2a2e35; color: #e8eaed; padding: 24px 28px; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); border-left: 3px solid #5f6368;">
+                                <div style="line-height: 1.9; white-space: pre-wrap; font-size: 15px; letter-spacing: 0.3px;">${qa.answer}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                messagesHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                        <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">开始对话</div>
+                        <div style="font-size: 14px;">在下方输入你的问题，或留空让AI主动引导</div>
+                    </div>
+                `;
+            }
+
+            contentArea.innerHTML = `
+                <div style="display: flex; flex-direction: column; height: 100%;">
+                    <div style="position: sticky; top: 0; z-index: 10; padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px;">
+                        <button onclick="exitQAMode()" style="background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;">← ${settings.language === 'en' ? 'Back' : '返回'}</button>
+                        <div>
+                            <div style="font-size: 18px; font-weight: 600; color: var(--text);">${currentNode.keyword}</div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">${settings.language === 'en' ? qaRecords.length + ' conversations' : '共 ' + qaRecords.length + ' 条对话'}</div>
+                        </div>
+                    </div>
+                    <div id="qa-messages-container" style="flex: 1; overflow-y: auto; padding: 20px;">
+                        ${messagesHTML}
+                    </div>
+                </div>
+            `;
+
+            // 滚动到底部
+            setTimeout(() => {
+                const container = document.getElementById('qa-messages-container');
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            }, 100);
+        }
+
+        // 退出问答回探索模式
+        function exitQAMode() {
+            currentMode = 'explore';
+            renderContent();
+            updateUI();
+        }
+
+        // 切换问答页码
+        function changeQAPage(page) {
+            if (!currentNode) return;
+            currentNode.qaCurrentPage = page;
+            renderQAInterface();
+        }
+
+        // 加载已保存的笔记
+        async function loadSavedNotes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/notes?language=${settings.language}`);
+                const data = await response.json();
+
+                if (data.success && data.notes && data.notes.length > 0) {
+                    // 递归构建树节点
+                    function buildTreeNode(noteData) {
+                        const node = new TreeNode(
+                            noteData.name,
+                            `${getText('note_saved_placeholder')}：${noteData.name}\n\n${getText('note_domain')}：${noteData.domain || getText('note_uncategorized')}\n${getText('note_learned_at')}：${noteData.learned_at || getText('note_unknown')}`,
+                            []
+                        );
+                        node.savedNote = true;
+                        node.noteId = noteData.id;
+                        node.expanded = false;
+
+                        // 恢复问答历史
+                        if (noteData.qa_history && noteData.qa_history.length > 0) {
+                            node.qaHistory = noteData.qa_history;
+                            console.log(`[恢复问答历史] ${noteData.name}: ${noteData.qa_history.length}轮`);
+                        }
+
+                        // 递归添加子节点
+                        if (noteData.children && noteData.children.length > 0) {
+                            noteData.children.forEach(childData => {
+                                const childNode = buildTreeNode(childData);
+                                childNode.parent = node;
+                                node.children.push(childNode);
+                            });
+                        }
+
+                        return node;
+                    }
+
+                    // 将笔记显示为根节点
+                    data.notes.forEach(noteData => {
+                        const node = buildTreeNode(noteData);
+                        rootNodes.push(node);
+                    });
+
+                    renderTree();
+                    console.log(`已加载 ${data.total} 条笔记，${data.notes.length} 个根节点`);
+                }
+            } catch (error) {
+                console.log('加载笔记失败:', error);
+            }
+        }
+
+        // 处理问答按钮点击
+        async function handleQuestionClick() {
+            const input = document.getElementById('input-field');
+            const keyword = input.value.trim();
+
+            if (keyword) {
+                // 有输入内容：先提问，再切换界面
+                const ok = await askQuestion(keyword);
+                if (ok !== false) {
+                    input.value = '';
+                }
+                // 提问完成后切换到问答界面
+                startQA();
+            } else {
+                // 无输入内容：直接切换到问答界面
+                startQA();
+            }
+        }
+
+        // 处理提交
+        async function handleSubmit() {
+            // 如果正在生成，点击停止
+            if (currentAbortController) {
+                currentAbortController.abort();
+                return;
+            }
+
+            const input = document.getElementById('input-field');
+            const keyword = input.value.trim();
+
+            if (currentMode === 'question') {
+                // 问答模式：只有第一次可以留空，后续必须有输入
+                const isFirstQuestion = !currentNode.qaHistory || currentNode.qaHistory.length === 0;
+                if (!keyword && !isFirstQuestion) {
+                    return;
+                }
+                const ok = await askQuestion(keyword);
+                if (ok !== false) {
+                    input.value = '';
+                }
+            } else if (!currentNode) {
+                // 第0层：执行探索（必须有输入）
+                if (!keyword) return;
+                const ok = await explore(keyword);
+                if (ok !== false) {
+                    input.value = '';
+                }
+            }
+        }
+
+        // 探索概念
+        async function explore(keyword, parentNode = null) {
+            // 退出问答模式
+            currentMode = 'explore';
+            const btn = document.getElementById('btn-submit');
+            const questionBtn = document.getElementById('btn-question');
+            document.getElementById('input-field').placeholder = getText('input_placeholder_explore');
+            btn.textContent = getText('btn_explore');
+            questionBtn.classList.remove('primary');
+
+            // 检查是否已存在该概念
+            const existingNode = findNodeByKeyword(keyword);
+            if (existingNode && !parentNode) {
+                // 已存在，直接定位
+                currentNode = existingNode;
+                if (existingNode.parent) {
+                    existingNode.parent.expanded = true;
+                }
+                renderTree();
+                renderContent();
+                updateUI();
+                return;
+            }
+
+            // 切换按钮为停止状态
+            const originalText = btn.textContent;
+            btn.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <div class="stop-icon" style="
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 50%;
+                        background: #3b82f6;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        animation: pulse-stop 1.5s ease-in-out infinite;
+                    ">
+                        <div style="width: 8px; height: 8px; background: white; border-radius: 1px;"></div>
+                    </div>
+                    <span>${getText('btn_stop')}</span>
+                </div>
+            `;
+            btn.style.transition = 'all 0.3s ease';
+            btn.style.background = 'transparent';
+            btn.style.border = 'none';
+            btn.style.color = 'var(--text)';
+
+            // 创建AbortController
+            currentAbortController = new AbortController();
+
+            showLoading();
+
+            try {
+                const depth = parentNode ? getDepth(parentNode) + 1 : 0;
+                const response = await fetch(`${API_BASE}/api/explore`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        concept: keyword,
+                        depth,
+                        existing_roots: rootNodes.map(n => n.keyword),
+                        language: settings.language
+                    }),
+                    signal: currentAbortController.signal  // 支持中断
+                });
+
+                const data = await response.json();
+
+                // 恢复按钮状态
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+                btn.style.border = '';
+                btn.style.color = '';
+                currentAbortController = null;
+
+                // 如果返回的analysis是JSON对象，转换为HTML字符串
+                if (data.analysis && typeof data.analysis === 'object') {
+                    data.analysis = formatAnalysisToHTML(data.analysis);
+                }
+
+                if (data.success) {
+                    // 创建新节点
+                    const node = new TreeNode(keyword, data.analysis, data.concepts);
+
+                    if (parentNode) {
+                        // 有父节点，直接添加为子节点
+                        node.parent = parentNode;
+                        parentNode.children.push(node);
+                    } else {
+                        // 没有父节点，判断是否应该归类到已有根节点
+                        let shouldMerge = false;
+
+                        // 检查API是否建议归类（未来可由后端返回）
+                        if (data.parent_suggestion) {
+                            const suggestedParent = findNodeByKeyword(data.parent_suggestion);
+                            if (suggestedParent) {
+                                node.parent = suggestedParent;
+                                suggestedParent.children.push(node);
+                                suggestedParent.expanded = true;
+                                shouldMerge = true;
+                            }
+                        }
+
+                        if (!shouldMerge) {
+                            // 处理反向归类：将已有根节点移到新节点下
+                            if (data.children_suggestions && data.children_suggestions.length > 0) {
+                                data.children_suggestions.forEach(childKeyword => {
+                                    const childNodeIndex = rootNodes.findIndex(n => n.keyword === childKeyword);
+                                    if (childNodeIndex !== -1) {
+                                        const childNode = rootNodes[childNodeIndex];
+                                        rootNodes.splice(childNodeIndex, 1);
+                                        childNode.parent = node;
+                                        node.children.push(childNode);
+                                        console.log(`[反向归类] ${childKeyword} -> ${node.keyword}`);
+                                    }
+                                });
+                            }
+
+                            // 作为独立根节点
+                            rootNodes.push(node);
+                        }
+                    }
+
+                    currentNode = node;
+                    renderTree();
+                    renderContent();
+                    updateUI();
+
+                    // 自动保存笔记到Obsidian
+                    await saveNote(node);
+                } else {
+                    showToast(getText('toast_explore_failed') + ': ' + data.error, 'error');
+                }
+            } catch (error) {
+                // 恢复按钮状态
+                btn.innerHTML = originalText;
+                btn.style.background = '';
+                btn.style.border = '';
+                btn.style.color = '';
+                currentAbortController = null;
+
+                if (error.name === 'AbortError') {
+                    showToast(getText('toast_stopped'), 'info');
+                    // 清空加载状态，显示空界面
+                    document.getElementById('content-area').innerHTML = `
+                        <div class="empty-state">
+                            <h2>📖 KnowFlow</h2>
+                            <p>苏格拉底式探索 · 深度理解概念</p>
+                        </div>
+                    `;
+                    return false;
+                } else {
+                    showToast(getText('toast_request_failed') + ': ' + error.message, 'error');
+                }
+            }
+        }
+
+        // 根据关键词查找节点
+        function findNodeByKeyword(keyword) {
+            for (let root of rootNodes) {
+                if (root.keyword.toLowerCase() === keyword.toLowerCase()) return root;
+                const found = searchByKeyword(root, keyword);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function searchByKeyword(node, keyword) {
+            if (node.keyword.toLowerCase() === keyword.toLowerCase()) return node;
+            for (let child of node.children) {
+                const found = searchByKeyword(child, keyword);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        // 渲染概念树
+        function renderTree() {
+            const container = document.getElementById('tree-container');
+
+            if (rootNodes.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary); font-size: 13px;">
+                        开始探索后<br>这里会显示概念树
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            rootNodes.forEach(node => {
+                html += renderTreeNode(node, 0);
+            });
+            container.innerHTML = html;
+        }
+
+        // 渲染单个树节点
+        function renderTreeNode(node, level) {
+            const isActive = node === currentNode;
+            const hasChildren = node.children.length > 0;
+            const expandIcon = node.expanded ? '▼' : '▶';
+
+            let html = `
+                <div class="tree-node">
+                    <div class="tree-item ${isActive ? 'active' : ''}" onclick="selectNode('${node.id}')" style="padding-left: ${level * 12 + 12}px; position: relative;" onmouseenter="this.querySelector('.tree-delete').style.opacity='1'" onmouseleave="this.querySelector('.tree-delete').style.opacity='0'">
+                        ${hasChildren ? `<div class="tree-expand ${node.expanded ? 'expanded' : ''}" onclick="event.stopPropagation(); toggleNode('${node.id}')">${expandIcon}</div>` : '<div style="width:16px"></div>'}
+                        <div class="tree-label">${node.keyword}</div>
+                        <div class="tree-delete" onclick="event.stopPropagation(); deleteNode('${node.id}')" style="opacity:0; transition:opacity 0.15s; padding: 2px 6px; color: #666; font-size: 12px; cursor: pointer; margin-left: auto; flex-shrink: 0;">✕</div>
+                    </div>
+                </div>
+            `;
+
+            if (node.expanded && hasChildren) {
+                node.children.forEach(child => {
+                    html += renderTreeNode(child, level + 1);
+                });
+            }
+
+            return html;
+        }
+
+        // 删除节点
+        function deleteNode(nodeId) {
+            const node = findNodeById(nodeId);
+            if (!node) return;
+
+            // 从父节点或根节点移除（id比较用==兼容string/number）
+            if (node.parent) {
+                node.parent.children = node.parent.children.filter(c => c.id != nodeId);
+            } else {
+                const idx = rootNodes.findIndex(n => n.id == nodeId);
+                if (idx !== -1) rootNodes.splice(idx, 1);
+            }
+
+            if (currentNode && currentNode.id == nodeId) {
+                currentNode = null;
+                currentMode = 'explore';
+                document.getElementById('content-area').innerHTML = `
+                    <div class="empty-state">
+                        <h2>📖 KnowFlow</h2>
+                        <p>${getText('input_placeholder_explore')}</p>
+                    </div>
+                `;
+            }
+
+            renderTree();
+            updateUI();
+        }
+
+        // 选择节点
+        async function selectNode(nodeId) {
+            // 如果在问答模式且当前节点有未保存的问答，先保存
+            if (currentMode === 'question' && currentNode && currentNode.needsSave()) {
+                await saveNote(currentNode);
+            }
+
+            const node = findNodeById(nodeId);
+            if (node) {
+                currentNode = node;
+
+                // 有问答历史的节点默认进问答模式，否则探索模式
+                if (node.qaHistory && node.qaHistory.length > 0) {
+                    currentMode = 'question';
+                } else {
+                    currentMode = 'explore';
+                }
+
+                // 立即更新界面（显示选中效果）
+                renderTree();
+                renderContent();
+                updateUI();
+
+                // 如果是已保存的笔记节点，且analysis是占位符，则异步加载真实内容
+                if (node.savedNote && node.analysis && (node.analysis.includes('已保存的笔记：') || node.analysis.includes('Saved note'))) {
+                    try {
+                        document.title = `⏳ 加载中: ${node.keyword}`;
+                        // 调用探索API重新加载笔记内容
+                        const response = await fetch(`${API_BASE}/api/explore`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                concept: node.keyword,
+                                parent_concept: null,
+                                depth: 0,
+                                language: settings.language
+                            })
+                        });
+
+                        const data = await response.json();
+                        console.log('[API响应]', data);
+
+                        // 如果返回的analysis是JSON对象，转换为HTML字符串
+                        if (data.analysis && typeof data.analysis === 'object') {
+                            data.analysis = formatAnalysisToHTML(data.analysis);
+                        }
+
+                        if (data.success) {
+                            if (data.from_cache) {
+                                node.analysis = data.analysis;
+                                node.concepts = data.concepts || [];
+                                document.title = `${getText('title_loaded')}: ${node.keyword}`;
+                                renderContent();
+                                setTimeout(() => { document.title = getText('title_main'); }, 2000);
+                            } else {
+                                document.title = `${getText('title_no_cache')}: ${node.keyword}`;
+                                setTimeout(() => { document.title = getText('title_main'); }, 3000);
+                            }
+                        } else {
+                            document.title = `${getText('title_failed')}: ${data.error || 'unknown'}`;
+                            setTimeout(() => { document.title = getText('title_main'); }, 3000);
+                        }
+                    } catch (error) {
+                        console.error('加载笔记内容失败:', error);
+                        document.title = `${getText('title_error')}: ${error.message}`;
+                        setTimeout(() => { document.title = getText('title_main'); }, 3000);
+                    }
+                }
+            }
+        }
+
+        // 切换节点展开/收起
+        function toggleNode(nodeId) {
+            const node = findNodeById(nodeId);
+            if (node) {
+                node.expanded = !node.expanded;
+                renderTree();
+            }
+        }
+
+        // 查找节点
+        function findNodeById(nodeId) {
+            for (let root of rootNodes) {
+                if (root.id == nodeId) return root;
+                const found = searchInTree(root, nodeId);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        function searchInTree(node, nodeId) {
+            if (node.id == nodeId) return node;
+            for (let child of node.children) {
+                const found = searchInTree(child, nodeId);
+                if (found) return found;
+            }
+            return null;
+        }
+
+        // 获取节点深度
+        function getDepth(node) {
+            let depth = 0;
+            let current = node;
+            while (current.parent) {
+                depth++;
+                current = current.parent;
+            }
+            return depth;
+        }
+
+        // 深入子概念
+        async function deepDive(concept, index) {
+            if (!currentNode) return;
+            await explore(concept.name, currentNode);
+        }
+
+        // 快速提问
+        async function askQuestion(question) {
+            // 切换按钮为停止状态
+            const btnSubmit = document.getElementById('btn-submit');
+            const originalText = btnSubmit.textContent;
+
+            // 添加停止图标（蓝色圆形+白色方块）
+            btnSubmit.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <div class="stop-icon" style="
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 50%;
+                        background: #3b82f6;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        animation: pulse-stop 1.5s ease-in-out infinite;
+                    ">
+                        <div style="width: 8px; height: 8px; background: white; border-radius: 1px;"></div>
+                    </div>
+                    <span>${getText('btn_stop')}</span>
+                </div>
+            `;
+            btnSubmit.style.transition = 'all 0.3s ease';
+            btnSubmit.style.background = 'transparent';
+            btnSubmit.style.border = 'none';
+            btnSubmit.style.color = 'var(--text)';
+
+            // 创建AbortController
+            currentAbortController = new AbortController();
+
+            // 在问答界面底部显示加载提示
+            if (currentMode === 'question') {
+                const container = document.getElementById('qa-messages-container');
+                if (container) {
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.id = 'loading-indicator';
+                    loadingDiv.style.cssText = 'display: flex; justify-content: flex-start; margin-bottom: 24px;';
+                    loadingDiv.innerHTML = `
+                        <div style="max-width: 85%; background: #f8f9fa; color: #64748b; padding: 16px 24px; border-radius: 12px; border-left: 4px solid #cbd5e1;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; animation: pulse 1.5s ease-in-out infinite;"></div>
+                                <div style="font-size: 14px;">AI 正在思考...</div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(loadingDiv);
+                    container.scrollTop = container.scrollHeight;
+                }
+            }
+
+            try {
+                // 构建对话历史
+                // 关键：需要将当前用户输入作为对上一轮AI问题的回答
+                const history = [];
+                if (currentNode.qaHistory && currentNode.qaHistory.length > 0) {
+                    currentNode.qaHistory.forEach((qa, index) => {
+                        // 每一轮：qa.answer是AI的问题，qa.question是用户的回答
+                        history.push({
+                            question: qa.answer,  // AI之前的问题
+                            answer: qa.question || '（无回答）'  // 用户的回答
+                        });
+                    });
+
+                    // 如果用户这次有输入，这是对最后一个AI问题的回答
+                    if (question && history.length > 0) {
+                        // 更新最后一条历史的answer为当前用户输入
+                        history[history.length - 1].answer = question;
+                    }
+                }
+
+                const response = await fetch(`${API_BASE}/api/question`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: question,
+                        concept: currentNode.keyword,
+                        history: history,
+                        language: settings.language
+                    }),
+                    signal: currentAbortController.signal  // 支持中断
+                });
+
+                const data = await response.json();
+
+                // 移除加载提示
+                const loadingDiv = document.getElementById('loading-indicator');
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                // 恢复按钮状态
+                btnSubmit.innerHTML = originalText;
+                btnSubmit.style.background = '';
+                btnSubmit.style.border = '';
+                btnSubmit.style.color = '';
+                currentAbortController = null;
+
+                if (data.success) {
+                    showDialogueResponse(question, data.answer);
+                }
+            } catch (error) {
+                // 移除加载提示
+                const loadingDiv = document.getElementById('loading-indicator');
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                // 恢复按钮状态
+                btnSubmit.innerHTML = originalText;
+                btnSubmit.style.background = '';
+                btnSubmit.style.border = '';
+                btnSubmit.style.color = '';
+                currentAbortController = null;
+
+                if (error.name === 'AbortError') {
+                    showToast(getText('toast_qa_stopped'), 'info');
+                    return false;
+                } else {
+                    showToast(getText('toast_qa_failed'), 'error');
+                }
+            }
+        }
+
+        // 启动问答（深入当前概念）
+        async function startSocratic() {
+            if (!currentNode) return;
+
+            switchMode('question');
+            const input = document.getElementById('input-field');
+            input.placeholder = getText('input_placeholder_qa').replace('{concept}', currentNode.keyword);
+        }
+
+        // 保存笔记到Obsidian（自动触发，静默保存）
+        async function saveNote(node = currentNode) {
+            if (!node || node.isSaving) return;
+
+            // 避免重复保存
+            node.isSaving = true;
+
+            try {
+                const content = node.generateNote();
+
+                // 提取领域信息（从第一个子概念获取）
+                let domain = '';
+                if (node.concepts && node.concepts.length > 0) {
+                    const parts = node.concepts[0].name.split('|').map(p => p.trim());
+                    domain = parts[1] || '';
+                }
+
+                const response = await fetch(`${API_BASE}/api/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        concept: node.keyword,
+                        content: content,
+                        domain: domain,
+                        parent_concept: node.parent ? node.parent.keyword : null,
+                        qa_history: node.qaHistory,
+                        language: settings.language
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    node.markSaved();
+                    console.log(`[自动保存] ${node.keyword} -> ${data.relative_path}`);
+                } else {
+                    console.error('保存失败:', data.error);
+                    showToast(getText('toast_save_note_failed') + ': ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('保存失败:', error);
+                showToast(getText('toast_save_note_failed') + ': ' + error.message, 'error');
+            } finally {
+                node.isSaving = false;
+            }
+        }
+
+        // 返回上一层
+        function goBack() {
+            if (currentNode && currentNode.parent) {
+                currentNode = currentNode.parent;
+                renderTree();
+                renderContent();
+                updateUI();
+            }
+        }
+
+        // 开始新话题
+        async function startNew() {
+            // 如果在问答模式且当前节点有未保存的问答，先保存
+            if (currentMode === 'question' && currentNode && currentNode.needsSave()) {
+                await saveNote(currentNode);
+            }
+
+            // 不清空树，只是取消当前选择和退出问答模式
+            currentNode = null;
+            currentMode = 'explore';
+
+            const input = document.getElementById('input-field');
+            const btn = document.getElementById('btn-submit');
+            const questionBtn = document.getElementById('btn-question');
+
+            input.placeholder = getText('input_placeholder_explore');
+            input.value = '';
+            btn.textContent = getText('btn_explore');
+            questionBtn.classList.remove('primary');
+
+            renderTree();
+            document.getElementById('content-area').innerHTML = `
+                <div class="empty-state">
+                    <h2>📖 KnowFlow</h2>
+                    <p>${getText('input_placeholder_explore')}</p>
+                </div>
+            `;
+            updateUI();
+        }
+
+        // 切换模式（废弃，改用startQA）
+        function switchMode(mode) {
+            // 已废弃
+        }
+
+        // 渲染内容
+        function renderContent() {
+            if (!currentNode) return;
+
+            // 问答模式下渲染问答界面
+            if (currentMode === 'question') {
+                renderQAInterface();
+                return;
+            }
+
+            const contentArea = document.getElementById('content-area');
+
+            // 过滤掉analysis中的"## 相关概念"部分
+            let cleanAnalysis = currentNode.analysis;
+            const relatedConceptsIndex = cleanAnalysis.indexOf('## 相关概念');
+            if (relatedConceptsIndex > -1) {
+                cleanAnalysis = cleanAnalysis.substring(0, relatedConceptsIndex).trim();
+            }
+
+            // 使用marked渲染markdown
+            const htmlContent = marked.parse ? marked.parse(cleanAnalysis) : marked(cleanAnalysis);
+
+            let html = `
+                <div class="content-section">
+                    ${htmlContent}
+                </div>
+            `;
+
+            if (currentNode.concepts && currentNode.concepts.length > 0) {
+                html += '<div class="content-section"><h2>相关概念</h2><div class="concepts-grid">';
+                currentNode.concepts.forEach((concept, index) => {
+                    // 解析概念名、领域、类型（格式：概念名 | 领域/方向 | 类型）
+                    const parts = concept.name.split('|').map(p => p.trim());
+                    const conceptName = parts[0] || concept.name;
+                    const domain = parts[1] || '';
+                    const type = parts[2] || '';
+
+                    // 类型标签文字（从LLM返回内容中读取，不翻译）
+                    let typeLabel = type;
+
+                    html += `
+                        <div class="concept-card">
+                            <div class="concept-header">
+                                <button class="concept-number-btn" onclick="event.stopPropagation(); deepDiveByIndex(${index})">${index + 1}</button>
+                                <div class="concept-info">
+                                    <div class="concept-name">${conceptName}</div>
+                                    <div class="concept-domain">
+                                        ${domain}
+                                        ${typeLabel ? `<span class="concept-label">${typeLabel}</span>` : ''}
+                                    </div>
+                                </div>
+                                <button class="concept-expand-btn" onclick="event.stopPropagation(); toggleConceptDetail(${index})">▼</button>
+                            </div>
+                            <div class="concept-detail" id="concept-detail-${index}">
+                                <div>${concept.description || '<span style="color: #888; font-style: italic;">暂无详细描述，点击数字按钮深入探索该概念</span>'}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div></div>';
+            }
+
+            contentArea.innerHTML = html;
+        }
+
+        // 切换概念详情展开/收起
+        function toggleConceptDetail(index) {
+            const detail = document.getElementById(`concept-detail-${index}`);
+            const btn = detail.previousElementSibling.querySelector('.concept-expand-btn');
+
+            if (detail.classList.contains('show')) {
+                detail.classList.remove('show');
+                btn.classList.remove('expanded');
+            } else {
+                detail.classList.add('show');
+                btn.classList.add('expanded');
+            }
+        }
+
+        // 通过索引深入
+        function deepDiveByIndex(index) {
+            if (currentNode && currentNode.concepts[index]) {
+                deepDive(currentNode.concepts[index], index);
+            }
+        }
+
+        // 显示对话回复
+        function showDialogueResponse(question, answer) {
+            // 使用TreeNode的addQA方法添加问答记录
+            if (currentNode) {
+                currentNode.addQA(question, answer);
+            }
+
+            // 每轮问答结束后立即保存，防止关窗丢失
+            if (currentNode) {
+                saveNote(currentNode).catch(e => console.error('[自动保存问答失败]', e));
+            }
+
+            // 如果当前在问答界面，重新渲染（自动跳到最后一页）
+            if (currentMode === 'question') {
+                const totalPages = Math.ceil(currentNode.qaHistory.length / 5);
+                currentNode.qaCurrentPage = totalPages; // 跳到最后一页
+                renderQAInterface();
+
+                // 滚动到底部
+                const contentArea = document.getElementById('content-area');
+                contentArea.scrollTop = contentArea.scrollHeight;
+            }
+        }
+
+        // 更新UI状态
+        function updateUI() {
+            const depth = currentNode ? getDepth(currentNode) + 1 : 0;
+
+            // 更新深度和话题
+            document.getElementById('depth-indicator').textContent = getText('depth_indicator').replace('{depth}', depth);
+            document.getElementById('current-topic').textContent = currentNode ? currentNode.keyword : '-';
+
+            // 在问答模式下隐藏深度和话题信息
+            const depthIndicator = document.getElementById('depth-indicator');
+            const currentTopic = document.getElementById('current-topic');
+            const mainHeader = document.querySelector('.main-header');
+
+            if (currentMode === 'question') {
+                depthIndicator.style.display = 'none';
+                currentTopic.style.display = 'none';
+                mainHeader.style.borderBottom = 'none';
+            } else {
+                depthIndicator.style.display = 'block';
+                currentTopic.style.display = 'block';
+                mainHeader.style.borderBottom = '1px solid var(--border)';
+            }
+
+            // 控制输入面板和按钮
+            const inputPanel = document.querySelector('.input-panel');
+            const btnSubmit = document.getElementById('btn-submit');
+            const btnQuestion = document.getElementById('btn-question');
+            const inputField = document.getElementById('input-field');
+
+            if (!currentNode) {
+                inputPanel.style.display = 'block';
+                btnSubmit.style.display = 'block';
+                btnQuestion.style.display = 'none';
+                inputField.placeholder = getText('input_placeholder_explore');
+                btnSubmit.textContent = getText('btn_explore');
+            } else if (currentMode === 'question') {
+                inputPanel.style.display = 'block';
+                btnSubmit.style.display = 'block';
+                btnQuestion.style.display = 'none';
+                inputField.placeholder = getText('input_placeholder_qa').replace('{concept}', currentNode.keyword);
+                btnSubmit.textContent = getText('btn_submit');
+            } else {
+                inputPanel.style.display = 'block';
+                btnSubmit.style.display = 'none';
+                btnQuestion.style.display = 'block';
+                inputField.placeholder = getText('input_placeholder_qa').replace('{concept}', currentNode.keyword);
+            }
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            document.getElementById('content-area').innerHTML = '<div class="loading">...</div>';
+        }
+
+        // 初始化
+        init();
+    </script>
+
+    <!-- 设置模态窗口 -->
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>设置</h2>
+                <button class="btn-modal-close">×</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="tab-btn active" data-tab="general">通用</button>
+                <button class="tab-btn" data-tab="llm">LLM</button>
+                <button class="tab-btn" data-tab="dialogue">问答</button>
+                <button class="tab-btn" data-tab="storage">存储</button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-panel active" id="tab-general">
+                    <div class="form-group">
+                        <label>语言 / Language</label>
+                        <div class="language-selector">
+                            <button class="lang-btn active" data-lang="zh">中文</button>
+                            <button class="lang-btn" data-lang="en">English</button>
+                        </div>
+                        <small>重启应用后生效 / Takes effect after restart</small>
+                    </div>
+                </div>
+                <div class="tab-panel" id="tab-llm">
+                    <div class="form-group">
+                        <label>Max Tokens</label>
+                        <input type="number" id="setting-max-tokens" value="8192" min="1024" max="32768" step="1024">
+                        <small>输出的最大token数量</small>
+                    </div>
+                </div>
+                <div class="tab-panel" id="tab-dialogue">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="setting-compress" checked>
+                            启用智能压缩
+                        </label>
+                        <small>多轮问答时自动压缩冗余内容</small>
+                    </div>
+                </div>
+                <div class="tab-panel" id="tab-storage">
+                    <div class="form-group">
+                        <label>Obsidian路径</label>
+                        <input type="text" id="setting-obsidian-path" placeholder="D:/Obsidian/vault">
+                        <small>笔记保存位置</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="btn-cancel">取消</button>
+                <button class="btn-primary" id="btn-save-settings">保存</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
